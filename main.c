@@ -1,75 +1,113 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "fila.c"
+#include "fila.h"
 #include <time.h>
 
 int main()
 {
     Fila *filalegal = criarFila();
 
-    // criando e adicionando algumas transacoes no historico aka fila
-    adicionarTransacao(filalegal, criarTransacao(24.5, "01/08/2023", "fardo de cerveja"));
-    adicionarTransacao(filalegal, criarTransacao(25.5, "02/08/2023", "mais um fardinho kk"));
-    adicionarTransacao(filalegal, criarTransacao(30, "03/08/2023", "nossa o preco do fardo subiu ne"));
-    // adicionarTransacao(filalegal, criarTransacao(34.9, "04/08/2023", "DOBROU DE PRECO MAN"));
-    // adicionarTransacao(filalegal, criarTransacao(40, "05/08/2023", "vai po caralho vou devolve"));
+    int escolha = 0;
+    double valor, saldo=0;
+    char descricao[102];
+    int tipo=0;
 
-    // tirando a ultima transacao
-    /*Transacao *antigaTransacao = tirarTransacao(filalegal);
-    if (antigaTransacao != NULL)
-    {
-        printf("\nTransacao removida:\n");
-        printf("Valor:%.2lf, Data:%s, Descricao:%s\n", antigaTransacao->valor, antigaTransacao->data, antigaTransacao->descricao);
-        free(antigaTransacao);
-    }*/
-
-    int numero, temp;
-    double valor;
-    char data[10];
-    char descricao[100];
-    char oi[1];
 
     while (1)
     {
         system("clear");
-        printf("\n");
         printf("Escolha uma opção:\n\n");
-        printf("1. MOSTRAR HISTÓRICO (mais antigo até mais novo)\n");
+        printf("1. MOSTRAR HISTÓRICO E SALDO (mais antigo até mais novo)\n");
         printf("2. ADICIONAR TRANSAÇÃO\n");
-        printf("3. FECHAR PROGRAMA\n");
+        printf("3. TIRAR ÚLTIMA TRANSAÇÃO\n");
+        printf("4. FECHAR PROGRAMA\n");
 
-        scanf("%d", &numero);
-
-        if (numero == 3)
-            break;
-        if (numero == 1)
+        scanf("%d", &escolha);
+        system("clear");
+        switch (escolha)
         {
+        case 1:
+            printf("========================\nSaldo atual: R$%.2lf ||\n", saldo);
             mostrarHistorico(filalegal);
-            printf("\nDigite qualquer coisa e dê ENTER para retornar ao menu.");
-            scanf("%s", oi);
-        }
-        if (numero == 2)
-        {
+            printf("\nPressione Enter (talvez duas vezes) para retornar ao menu.\n");
+            getchar(); // Consumir o caractere de nova linha
+            getchar(); // Aguardar um novo caractere
+            break;
+        case 2:
             printf("Valor da transação: ");
             scanf("%lf", &valor);
-            fflush(stdin);
-            printf("Data da transação: ");
-            // scanf("%s", data);
-            fgets(data, 10, stdin);
+            getchar(); // Consumir o caractere de nova linha
+
+            time_t t = time(NULL);
+            struct tm *data_atual = localtime(&t);
+            char dataHora[20];
+            strftime(dataHora, sizeof(dataHora), "%d/%m/%Y %H:%M:%S", data_atual);
+
+            printf("Tipo de transação (1 para crédito, 2 para débito): ");
+            scanf("%d", &tipo);
+            getchar();
+            if(tipo!=1 && tipo!=2)
+            {
+                printf("\nTipo inválido. Pressione Enter para retornar.\n");
+                break;
+            }
+            if(tipo==1)
+            {
+                saldo=saldo+valor;
+                printf("Crédito escolhido.\n");
+            }
+            if(tipo==2)
+            {
+                saldo=saldo-valor;
+                if(saldo<0) printf("Saldo negativo, cuidado com as dívidas hein...\n");
+                printf("Débito escolhido.\n");
+            }
+
             printf("Descrição simples: ");
-            // scanf("%[^\n]%*c", descricao);
-            fgets(descricao, 100, stdin);
-            adicionarTransacao(filalegal, criarTransacao(valor, data, descricao));
-            printf("Transação feita com sucesso!\n");
+            fgets(descricao, sizeof(descricao), stdin);
+            descricao[strlen(descricao) - 1] = '\0'; // Remover o '\n' do final
+            adicionarTransacao(filalegal, criarTransacao(valor, tipo, dataHora, descricao));
+            printf("Transação adicionada com sucesso! Pressione Enter para retornar.\n");
+            break;
+        case 3:
+        {
+            Transacao *transacaoRemovida = tirarTransacao(filalegal);
+            if (transacaoRemovida != NULL)
+            {
+                if(transacaoRemovida->tipo==1)
+                {
+                    saldo=saldo-transacaoRemovida->valor;
+                    printf("\nTransação de crédito removida. Dinheiro debitado.\n");
+                }
+                if(transacaoRemovida->tipo==2)
+                {
+                    saldo=saldo-transacaoRemovida->valor;
+                    printf("\nTransação de débito removida. Dinheiro estornado.\n");
+                }
+                printf("Valor: R$%.2lf, Data/Hora: %s\n", transacaoRemovida->valor, transacaoRemovida->dataHora);
+                printf("Descrição: %s\n", transacaoRemovida->descricao);
+
+                free(transacaoRemovida);
+            }
+            else
+            {
+                printf("Não há transações para remover.\n");
+            }
+            printf("\nPressione Enter (talvez duas vezes) para retornar ao menu.\n");
+            getchar(); // Aguardar um novo caractere
         }
+        break;
+        case 4:
+            liberarFila(filalegal);
+            printf("Programa encerrado.\n");
+            return 0;
+        default:
+            printf("Opção inválida. Escolha novamente.\n");
+        }
+
+        getchar(); // Consumir o caractere de nova linha pendente
     }
-
-    // mostrando historico, obviamente
-    // mostrarHistorico(filalegal);
-
-    // liberando a memoria e tals
-    liberarFila(filalegal);
 
     return 0;
 }
